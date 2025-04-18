@@ -21,20 +21,22 @@ class Para:
     classroom: str
 
 
-def build_request_url(group: str, teacher: str, cathedra: str, classroom: str) -> str:
-    # todo перенести в конфиг, не хардкодить
-    url = 'https://guap.ru/rasp?'
-
-    if group.strip() != '':
-        url += f'gr={group}&'
-    if teacher.strip() != '':
-        url += f'pr={teacher}&'
-    if cathedra.strip() != '':
-        url += f'ch={cathedra}&'
-    if classroom.strip() != '':
-        url += f'ad={classroom}&'
-
-    return url
+def build_request_url(
+        group: str = "",
+        teacher: str = "",
+        cathedra: str = "",
+        classroom: str = "",
+        # todo перенести в конфиг, не хардкодить
+        base_url: str = "https://guap.ru/rasp?"
+) -> str:
+    params = {
+        'gr': group,
+        'pr': teacher,
+        'ch': cathedra,
+        'ad': classroom
+    }
+    query = "&".join(f"{key}={value}" for key, value in params.items() if value.strip())
+    return f"{base_url}{query}"
 
 
 def TypeOfWeek_from_class(_class: list) -> TypeOfWeek:
@@ -47,30 +49,46 @@ def TypeOfWeek_from_class(_class: list) -> TypeOfWeek:
     raise ValueError(f'Unknown type of week: {_class}')
 
 
+def get_elements_between(list, start_condition, end_condition):
+    start_index = None
+    end_index = None
+
+    for i, elem in enumerate(list):
+        if start_condition(elem) and start_index is None:
+            start_index = i
+        elif end_condition(elem) and start_index is not None:
+            end_index = i
+            break
+
+    if start_index is None or end_index is None:
+        return []
+    return list[start_index: end_index]
+
+
 if '__main__' == __name__:
-    print(build_request_url('6427', '', '', ''))
-    response = requests.get(build_request_url('6427', '', '', ''))
+    response = requests.get(build_request_url(group='6427'))
     page = BeautifulSoup(response.text, 'lxml')
 
-    elems = page.find('div', class_='container-xxl document').find_all(recursive=False)
+    container = page.find('div', class_='container-xxl document').find_all(recursive=False)
 
-    in_schedule = False
-    buffer = []
-    weekday = ''
-    number = -1
+    schedule_elements = get_elements_between(
+        list=list(container),
+        start_condition=lambda item: item.name == 'h4',
+        end_condition=lambda item: item.name == 'p'
+    )
 
-    for block in elems:
+    schedule = []
+    weekday = None
+    number = None
+
+    for block in schedule_elements:
         if block.name == 'h4':
             weekday = block.text
-            in_schedule = True
-        if block.name == 'p':
-            break
-        if in_schedule and block.name == 'div':
+        elif block.name == 'div':
             para_block = list(block.find_all('div', recursive=False))
             if len(para_block) == 0:
                 number = block.text
                 continue
-
             para_type_of_week = TypeOfWeek_from_class(para_block[0]['class'])
 
             para_info = list(para_block[1].find_all('div', recursive=False))
@@ -83,7 +101,7 @@ if '__main__' == __name__:
             para_classroom = additional_info[0].text
             para_teacher = additional_info[1].text
 
-            para = Para(
+            schedule.append(Para(
                 name=para_name,
                 weekday=weekday,
                 type_of_para=para_type,
@@ -91,6 +109,6 @@ if '__main__' == __name__:
                 number=number,
                 teacher=para_teacher,
                 classroom=para_classroom
-            )
+            ))
 
-            print(para)
+    print(schedule)
