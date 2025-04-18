@@ -16,7 +16,7 @@ class Para:
     weekday: str
     type_of_para: str
     type_of_week: TypeOfWeek
-    number: int
+    number: str
     teacher: str
     classroom: str
 
@@ -56,18 +56,19 @@ if '__main__' == __name__:
 
     in_schedule = False
     buffer = []
+    weekday = ''
+    number = -1
+
     for block in elems:
         if block.name == 'h4':
-            if in_schedule:
-                buffer.clear()
+            weekday = block.text
             in_schedule = True
         if block.name == 'p':
-            in_schedule = False
             break
-
         if in_schedule and block.name == 'div':
             para_block = list(block.find_all('div', recursive=False))
             if len(para_block) == 0:
+                number = block.text
                 continue
 
             para_type_of_week = TypeOfWeek_from_class(para_block[0]['class'])
@@ -82,6 +83,14 @@ if '__main__' == __name__:
             para_classroom = additional_info[0].text
             para_teacher = additional_info[1].text
 
-            para = Para(name=para_name, weekday='todo, делать буфферы понедельные', type_of_para=para_type,
-                 type_of_week=para_type_of_week, number=-1, teacher=para_teacher, classroom=para_classroom)
+            para = Para(
+                name=para_name,
+                weekday=weekday,
+                type_of_para=para_type,
+                type_of_week=para_type_of_week,
+                number=number,
+                teacher=para_teacher,
+                classroom=para_classroom
+            )
+
             print(para)
