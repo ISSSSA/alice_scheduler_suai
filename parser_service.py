@@ -12,6 +12,7 @@ class ScheduleOptionsParser:
 
     def __init__(self, schedule_url: str):
         response = requests.get(schedule_url)
+        self.url = schedule_url
         self.parsing_page = BeautifulSoup(response.text, 'lxml')
         self.get_options()
 
@@ -24,6 +25,10 @@ class ScheduleOptionsParser:
     def get_options(self):
         for idx in self.ID.keys():
             self.ID[idx] = self.parsing_options(idx)
+
+
+
+
 
 
 if '__main__' == __name__:
