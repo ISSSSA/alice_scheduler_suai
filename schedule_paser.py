@@ -3,6 +3,7 @@ from dataclasses import dataclass
 from typing import List, Callable, Optional
 import requests
 from bs4 import BeautifulSoup, Tag
+from parser_service import ScheduleOptionsParser
 
 
 class TypeOfWeek(enum.Enum):
@@ -31,6 +32,7 @@ class ScheduleParser:
         self.cathedra = cathedra
         self.classroom = classroom
         self._schedule: List[Para] = []
+        self.options = ScheduleOptionsParser('https://guap.ru/rasp').ID
 
     @property
     def schedule(self) -> List[Para]:
@@ -38,10 +40,10 @@ class ScheduleParser:
 
     def build_request_url(self) -> str:
         params = {
-            'gr': self.group,
-            'pr': self.teacher,
-            'ch': self.cathedra,
-            'ad': self.classroom
+            'gr': self.options['selGroup'][self.group] if self.group != "" else "",
+            'pr': self.options['selPrep'][self.teacher] if self.teacher != "" else "",
+            'ch': self.options['selChair'][self.cathedra] if self.cathedra != "" else "",
+            'ad': self.options['selRoom'][self.classroom] if self.classroom != "" else ""
         }
         query = "&".join(f"{key}={value}" for key, value in params.items() if value.strip())
         return f"{self.BASE_URL}{query}"
@@ -134,6 +136,6 @@ class ScheduleParser:
 
 
 if __name__ == '__main__':
-    parser = ScheduleParser(group='6427')
+    parser = ScheduleParser(group='3235')
     parser.parse()
     print(parser.schedule)
